@@ -113,49 +113,45 @@ The work done in this Redis Pull Request #11659 means authentication can be hand
 
 1 AUTH.CONFIG SET <parameter> <value>
 
-Sets configuration parameters for the AD authentication module
-Parameters include server addresses, timeouts, cache settings, etc.
-Returns simple string reply: OK on success
-
+- sets configuration parameters for the AD authentication module
+- parameters include server addresses, timeouts, cache settings, etc.
+- returns simple string reply: OK on success
 
 2 AUTH.CONFIG GET <parameter>
 
-Gets current configuration for specified parameter
-Returns bulk string reply: parameter value
-
+- gets current configuration for specified parameter
+- returns bulk string reply: parameter value
 
 3 AUTH.RELOAD
 
-Reloads configuration from config file
-Reestablishes connections with AD servers
-Returns simple string reply: OK on success
-
+- reloads configuration from config file
+- reestablishes connections with AD servers
+- returns simple string reply: OK on success
 
 4 AUTH.STATUS
 
-Returns health and statistics information
-Format: nested hash with connection states, cache stats, auth counts
-
+- returns health and statistics information
+- format: nested hash with connection states, cache stats, auth counts
 
 5 AUTH.FLUSHCACHE
 
-Clears the credential cache
-Options to flush all or specific users
-Returns integer reply: number of entries flushed
+- clears the credential cache
+- options to flush all or specific users
+- returns integer reply: number of entries flushed
 
 ### Valkey Command Hooks
 
 #### Authentication Command Hook
 
-Intercepts AUTH command
-Processes credentials through AD binding
-Maintains original Valkey auth functionality for local accounts
+- intercepts AUTH command
+- processes credentials through AD binding
+- maintains original Valkey auth functionality for local accounts
 
 #### ACL Command Hook
 
-Integrates with ACL commands
-Maps AD groups to Valkey ACLs
-Preserves ACL inheritance and evaluation logic
+- integrates with ACL commands
+- maps AD groups to Valkey ACLs
+- preserves ACL inheritance and evaluation logic
 
 ### internal data structures
 
@@ -272,9 +268,3 @@ TDB :
 ### Dependencies 
 
 - ldap library
-
-If there is any debug mechanism introduced to support admin/operators for maintaining the feature.
-
-## Appendix (Optional)
-
-Links to related material such as issues, pull requests, papers, or other references.
