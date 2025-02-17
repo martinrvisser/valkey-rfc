@@ -189,39 +189,39 @@ Preserves ACL inheritance and evaluation logic
 
 #### Server Configuration
 
-AUTH.servers: list of AD server addresses (comma-separated)
-AUTH.port: LDAP port (default: 636 for LDAPS)
-AUTH.use_ssl: whether to use LDAPS (default: true)
-AUTH.timeout.connect: connection timeout in ms (default: 1000)
-AUTH.timeout.search: search operation timeout in ms (default: 2000)
-AUTH.retry.max: maximum retry attempts (default: 3)
-AUTH.retry.delay: delay between retries in ms (default: 500)
+- AUTH.servers: list of AD server addresses (comma-separated)
+- AUTH.port: LDAP port (default: 636 for LDAPS)
+- AUTH.use_ssl: whether to use LDAPS (default: true)
+- AUTH.timeout.connect: connection timeout in ms (default: 1000)
+- AUTH.timeout.search: search operation timeout in ms (default: 2000)
+- AUTH.retry.max: maximum retry attempts (default: 3)
+- AUTH.retry.delay: delay between retries in ms (default: 500)
 
 #### Authentication Configuration
 
-AUTH.basedn: nase DN for user searches
-AUTH.binddn: service account DN for initial bind
-AUTH.bindpw: service account password (stored securely)
-AUTH.user_filter: LDAP filter for user searches
-AUTH.group_filter: LDAP filter for group membership queries
-AUTH.default_permissions: default ACL for authenticated users
+- AUTH.basedn: nase DN for user searches
+- AUTH.binddn: service account DN for initial bind
+- AUTH.bindpw: service account password (stored securely)
+- AUTH.user_filter: LDAP filter for user searches
+- AUTH.group_filter: LDAP filter for group membership queries
+- AUTH.default_permissions: default ACL for authenticated users
 
 #### Cache Configuration
 
-AUTH.cache.enabled: enable credential caching (default: true)
-AUTH.cache.ttl: cache entry TTL in seconds (default: 300)
-AUTH.cache.size: maximum cache size (default: 10000)
-AUTH.cache.persist: persist cache across restarts (default: false)
-AUTH.cache.encryption: encryption method for cached credentials
+- AUTH.cache.enabled: enable credential caching (default: true)
+- AUTH.cache.ttl: cache entry TTL in seconds (default: 300)
+- AUTH.cache.size: maximum cache size (default: 10000)
+- AUTH.cache.persist: persist cache across restarts (default: false)
+- AUTH.cache.encryption: encryption method for cached credentials
 
 #### Security Configuration
 
-AUTH.tls.cert: path to client certificate
-AUTH.tls.key: path to client key
-AUTH.tls.ca: path to CA certificate
-AUTH.tls.verify: verify server certificates (default: true)
-AUTH.tls.ciphers: allowed cipher suites
-AUTH.tls.version: minimum TLS version (default: TLS1.2)
+- AUTH.tls.cert: path to client certificate
+- AUTH.tls.key: path to client key
+- AUTH.tls.ca: path to CA certificate
+- AUTH.tls.verify: verify server certificates (default: true)
+- AUTH.tls.ciphers: allowed cipher suites
+- AUTH.tls.version: minimum TLS version (default: TLS1.2)
 
 ### Metrics and Monitoring
 
