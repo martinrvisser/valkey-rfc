@@ -250,11 +250,11 @@ Preserves ACL inheritance and evaluation logic
 
 #### Logging Levels
 
-ERROR: critical issues requiring immediate attention
-WARN: potential issues that don't prevent operation
-INFO: normal operational events
-DEBUG: detailed debugging information
-TRACE: full protocol-level logging for troubleshooting
+- ERROR: critical issues requiring immediate attention
+- WARN: potential issues that don't prevent operation
+- INFO: normal operational events
+- DEBUG: detailed debugging information
+- TRACE: full protocol-level logging for troubleshooting
 
 ### Cluster mode
 
