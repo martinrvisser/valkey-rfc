@@ -79,7 +79,7 @@ The work done in this Redis Pull Request #11659 means authentication can be hand
 
 - Invalid credentials
 - Network timeouts
-- AD server unavailable
+- LDAP server unavailable
 - Cache corruption
 - Configuration errors
 - Group resolution failures
