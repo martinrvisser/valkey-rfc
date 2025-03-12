@@ -25,41 +25,50 @@ Organizations running Valkey in enterprise environments frequently need to provi
 
 ## Design considerations
 
+There are three concerns that need to be considered in the implementation of this module: Configurability, Performance, and Security.
+
 ### Configurability
 
-Each type of event should be toggelable to audit
+Regarding the configurability concern, there are two configuration groups: the audit log output configuration, and the audit events configuration.
+
+The module should support several protocols to store the audit logs, and the choice of which protocol to use should be dynamically configurable by the module.
+
+A filesystem audit log file protocol, and the [syslog](https://www.rfc-editor.org/rfc/rfc5424.html) protocol, will be the first protocols supported by the audit module.
+
+The format of the audit events should also be configurable by the user.
+
+Regarding the audit events configuration, the module should allow to toggle the following event categories:
 - connections and disconnections
 - auth requests with redaction of password
 - config commands
 - key operations
 
-For key operations, the following options should be configurable
+For key operations, the following options should be configurable:
 - disable logging of operation payload
 - configurable size of payload
 
+
 ### Performance
 
-- asynchronous processing where possible
-- efficient data structures for event capture
-- memory limits for local buffers
-- I/O throttling for external transmissions
+Regarding the perfomance concern, it's important that the flush of the audit events log does not happen in the critical path of the command being audited.
+
+The logging of audit events must be done as fast as possible, and therefore the event log must be kept in memory, and be asynchronously flushed using one of the configured output protocols.
+
+The memory buffer used to store the audit events must be limited by a configurable parameter. When the memory buffer is near full due to the flush not being able to keep up, the logging of events must be throttled.
+
 
 ### Security 
 
+Regarding the security concern, there are a few aspects that will be taken into consideration:
 - removal of potentially sensitive payloads
 - removal of sensistive authentication information
-- encryption of audit log data in transit
-- access control for audit commands
+- encryption of audit log data in transit (only applies to network protocols)
 
-### Compatibility
-
-- support for various Valkey deployment models
-- integration with different external log collection systems
-- standard formats for log records e.g. RFC5424 syslog protocol
+The removal of sensitive information should be configurable per command, but should be easy to apply the same configuration to all commands, or groups of commands.
 
 ## Specification
 
-Valkey modules can subscribe to Valkey server events. Client events like connections and disconnections can be handled through the ValkeyModuleEvent_ClientChange server event. 
+Valkey modules can subscribe to Valkey server events. Client events like connections and disconnections can be handled through the `ValkeyModuleEvent_ClientChange` server event. 
 
 Valkey server command execution can be plugged into by registering command filters. The filter applies in all execution paths including:
 
@@ -68,131 +77,100 @@ Valkey server command execution can be plugged into by registering command filte
 3. Invocation through Lua `server.call()`.
 4. Replication of a command from a primary.
 
-### Components
+When the installed hooks are invoked an event is generated and stored in a circular memory buffer.
 
-#### Command filter
+Each event has a well defined structure, There are several event types to be logged:
+- Connect
+- Disconnect
+- Authentication
+- Command
 
-- hooks into the Valkey command execution pipeline
-- captures commands in all execution paths
-- collects metadata about each operation
-- configurable command categories
-
-#### Event capture
-
-- subscribes to client connection and disconnection events
-- subscribes to AUTH operations
-- captures failed connection attempts
-- configurable on/of for each category
-
-#### Event/command Processor
-
-- formats captured events into structured audit records
-- applies filtering based on configuration
-- enriches events with additional context
-
-### Transport Layer
-
-- forwards audit events to external systems
-- supports multiple transport protocols, primarily TCP for syslog-NG integration
-- handles retries, backpressure, and connection management
-
-### Configuration Manager
-
-- manages module settings via Valkey module API
-- provides dynamic reconfiguration capabilities
-- stores persistent configuration in Valkey
-
-### On module load
-
-- load configuration from Valkey config or default values
-- initialize data structures and verify audit destination
-- register command filters with valkey core as per config
-- subscribe to connection type events as per config
-
-## Audit Event Types
-
-### DB Commands captured data
-
+For each event there is a set of fields that are commmon to all types:
 - Timestamp
-- Command name, key and arguments
-    - with option not to capture payload
-    - payload length limit configurable
 - Source IP/port
 - Target IP/port
-- Username
-- Database ID
-- Command status (success/failure)
+- Connection ID
+- Event type
 
-### Database Disconnects captured data
+Then there is a set of fields specific to each event type:
+- *Connect Type*
+  - Connection status (success/failure)
+  - Failure reason (if applicable)
+- *Disconnect Type*
+  - Disconnect status (graceful/error)
+  - Disconnect reason (if available)
+- *Authentication Type*
+  - Username
+  - ACL rules used for verification (TODO: why do we need this)
+  - Authentication status (success/failure)
+  - Failure reason (if applicable)
+- *Command Type*
+  - Database ID
+  - Command name
+  - Command key
+  - Command args (might be empty if payload capture is disabled, and payload length limit is configurable)
+  - Command status (success/failure)
 
-- Timestamp
-- Client ID
-- Source IP/port
-- Target IP/port
-- Database ID
-- Disconnect status (graceful/error)
-- Disconnect reason (if available)
+To flush the events from the memory buffer to the configured destinations, a background thread is spawned for each destination.
 
-### Database Connection attempts captured data
+The background thread is responsible for consuming the events from the memory buffer and send them to the respective destination, either using the syslog protocol, or writing to a filesystem file.
 
-- Timestamp
-- Client ID
-- Source IP/port
-- Target IP/port
-- Database ID
-- Connection status (success/failure)
-- Failure reason (if applicable)
+At any point in time, the event logging procedure must know what events have been already flushed by all background threads in order to add new events in the circular buffer.
 
-### Authentication Requests captured data
 
-- Timestamp
-- Client ID
-- Authentication action (new/existing connection)
-- Source IP/port
-- Target IP/port
-- Username
-- Database ID
-- ACL rules used for verification
-- Authentication status (success/failure)
+### Module Configuration
 
-## External Transport
+The configuration options for this module will be registered using the `ValkeyModule_RegisterStringConfig` API function, which will allow the user to set and get the options using the `CONFIG SET` and `CONFIG GET` commands.
 
-### Transport Protocols
+The list of configuration options is the following:
 
-- TCP (primary for syslog-NG integration)
-- Optional extensions for UDP, HTTP, or message queues
+#### General options
+- `audit.log.enabled`: whether the logging of audit events is enabled.
+- `audit.log.format`: the format of audit log messages
+- `audit.log.command.payload`: either true or false (default: `false`)
+- `audit.log.command.payload_length`: the length in characters of the payload in the case that payload logging is enabled.
+- `audit.log.memory.max_events`: the maximum number of events to held in memory.
+- `audit.log.exclude.types`: the comma separated list of event types to exclude from logging. Possible values `connect, disconnect, authentication, command`, (default: empty string).
 
-### Message Formats
+#### Filesystem options
+- `audit.file.enabled`: whether the logging to a filesystem file is enabled.
+- `audit.file.path`: the filesystem path of the file to store the audit events.
+- `audit.file.perms`: the file permissions mask for the logging file (default: `640`).
 
-- Syslog format (RFC 5424)
-- in a later phase, JSON
-- in a later phase, configurable custom formats
-
-### Transport Features
-
-- buffering with configurable limits
-- retry logic with exponential backoff
-- TLS support for encrypted transmission
-- authentication mechanisms for secure deliver
+#### Syslog options
+- `audit.syslog.enabled` whether the logging to a syslog compatible system is enabled.
+- `audit.syslog.facility`: the syslog facility (default: `daemon`).
+- `audit.syslog.tag`: the tag to added to the server identifier `valkey-<tag>` (default: empty string).
 
 ### Commands 
 
-CONFIG SET AUDIT.CONFIG <parameter> <value>
+#### `AUDIT.STATUS`
 
-#### Command Filtering
+Returns the information about the module configuration, the status of the memory circular buffer, and some statistics of the background threads, in the form of a dictionary value.
 
-- command category
-- status (success/failure)
-- on/off for payload
+Example:
 
-#### Performance Settings
+- logging
+  - file: enabled
+    - enabled: `true`
+    - path: `<file path>`
+  - syslog:
+    - enabled: `true`
+    - facility: `<facility>`
+  - stats:
+    - events:
+      - current: `<number of events in memory>`
+      - total: `<total number of events logged>`
+      - connect: `<total number of connect events logged>`
+      - disconnect: `<total number of disconnect events logged>`
+      - auth: `<total number of auth events logged>`
+      - command: `<total number of command events logged>`
+    - throughput
+      - last minute:
+        - logged: `<number of events logged per second>`
+        - flushed: `<number of events flushed per second>`
+      - last hour:
+        - logged: `<number of events logged per minute>`
+        - flushed: `<number of events flushed per minute>`
 
-- Buffer sizes
-- flush intervals for writing to target
-- payload length limit configurable
-
-#### Transport Configuration
-
-- endpoint configuration : initially syslog target
-
-
+  
